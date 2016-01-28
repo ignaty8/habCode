@@ -14,6 +14,14 @@
  
 #include <string.h>
 #include <util/crc16.h>
+
+// Some stuff we need to READ SCIENCE
+#include <SPI.h>
+#include <SD.h>
+ 
+File scienceFile;
+
+#define INPUT_SIZE 11
  
 char datastring[80];
 
@@ -26,6 +34,7 @@ MPU6050 accelgyro;
 float temperature;
 float pressure;
 float altitude;
+long timestamp;
 int32_t lastMicros;
 
 #define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
@@ -63,6 +72,21 @@ void setup() {
 
     // configure LED pin for activity indication
     pinMode(LED_PIN, OUTPUT);
+
+
+    // SD Card code
+    Serial.begin(9600);
+    Serial.print("Initialising SD card...");
+
+    //Remember to set the pin correctly. The shield we use is on pin 4! Don't listen to anyone that say otherwise!
+    int pin = 4;
+    pinMode(pin, OUTPUT);
+
+    if (!SD.begin(pin)) {
+      Serial.println("initialization failed!");
+      return;
+    }
+    Serial.println("initialization done.");
 }
 
 int16_t ax, ay, az;
@@ -134,8 +158,57 @@ void loop() {
     sprintf(checksum_str, "*%04X\n", CHECKSUM);
     strcat(datastring,checksum_str);
     rtty_txstring (datastring);
+
+    updateScience();
   //  delay(1000);
 }
+
+
+// Reads science data andwrites it to sd card.
+void updateScience() {
+
+  /*char science[INPUT_SIZE + 1];
+  science = readScience();*/
+
+  String tmp;
+  tmp = readScience();
+  char science[1024];
+  strncpy(science, tmp.c_str(), sizeof(science));
+  science[sizeof(science) - 1] = 0;
+
+  science[INPUT_SIZE] = 0;
+
+  scienceFile = SD.open("HabSci.csv", FILE_WRITE);
+
+  if (scienceFile){
+    Serial.print("Writing Data...");
+
+  // This bit splits our string into separate numbers, and sends each to be written on the sd card.
+  char* data =  strtok(science, ",");
+  while (data != 0) {
+    writeScience (data);
+
+    data = strtok(0, ",");
+  }
+
+  scienceFile.close();
+  
+  Serial.println("\tData Updates Written");
+  } else {
+    Serial.println("Failed to open file!");
+  }
+}
+
+// Somehow gets a string of data
+String readScience() {
+  return "1,2,3,44,55";
+}
+
+// Writes provided data into a file in the format we want.
+void writeScience(char* scienceData) {
+  scienceFile.println (scienceData);
+}
+
 
 
 void rtty_txstring (char * string) {
@@ -269,4 +342,6 @@ void setPwmFrequency(int pin, int divisor) {
         }
         TCCR2B = TCCR2B & 0b11111000 | mode;
     }
+
+    
 }
