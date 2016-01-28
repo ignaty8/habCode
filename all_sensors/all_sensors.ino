@@ -152,7 +152,7 @@ void loop() {
     Serial.print(", ");
     Serial.println(gz);
         Serial.println("--------------------");
-    snprintf(datastring, 80, "P=%ld, T=%d", (long)pressure, (long)temperature);
+    snprintf(datastring, 80, "P=%ld, T=%ld", (long)pressure, (long)temperature);
     unsigned int CHECKSUM = gps_CRC16_checksum(datastring); // Calculates the checksum for this datastring
     char checksum_str[6];
     sprintf(checksum_str, "*%04X\n", CHECKSUM);
@@ -201,7 +201,7 @@ void updateScience() {
 
 // Somehow gets a string of data
 String readScience() {
-  return "1,2,3,44,55";
+  return "%ld,"(timestamp) + floatToString(temperature) + "," + floatToString(pressure) + "," floatToString(altitude);
 }
 
 // Writes provided data into a file in the format we want.
