@@ -179,7 +179,7 @@ void updateScience() {
 
   science[INPUT_SIZE] = 0;
 
-  scienceFile = SD.open("HabSci.csv", FILE_WRITE);
+  scienceFile = SD.open("HabSki.csv", FILE_WRITE);
 
   if (scienceFile){
     Serial.print("Writing Data...");
