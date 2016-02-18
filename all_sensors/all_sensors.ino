@@ -20,6 +20,7 @@
 #include <SD.h>
  
 File scienceFile;
+#include "floatToString.h"
 
 #define INPUT_SIZE 11
  
@@ -201,8 +202,16 @@ void updateScience() {
 
 // Somehow gets a string of data
 String readScience() {
-  return "%ld,"(timestamp) + floatToString(temperature) + "," + floatToString(pressure) + "," floatToString(altitude);
+  //char* tempStr, pressureStr, altitudeStr;
+  char* tempStr = floatToString(tempStr, temperature, 5);
+  char* pressureStr = floatToString(pressureStr, pressure, 5);
+  char* altitudeStr = floatToString(altitudeStr, altitude, 5);
+
+  
+  return String(timestamp);
 }
+
+
 
 // Writes provided data into a file in the format we want.
 void writeScience(char* scienceData) {
