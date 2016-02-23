@@ -8,17 +8,17 @@ File scienceFile;
 void setup() {
   Serial.begin(9600);
   Serial.print("Initialising SD card...");
-
+  delay(100);
   //Remember to set the pin correctly. The shield we use is on pin 4! Don't listen to anyone that say otherwise!
   int pin = 4;
   pinMode(pin, OUTPUT);
-
+  delay(100);
   if (!SD.begin(pin)) {
     Serial.println("initialization failed!");
     return;
   }
   Serial.println("initialization done.");
-
+  delay(100);
 }
 
 void loop() {

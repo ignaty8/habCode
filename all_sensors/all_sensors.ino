@@ -20,6 +20,7 @@
 #include <SD.h>
  
 File scienceFile;
+String tmp;
 #include "floatToString.h"
 
 #define INPUT_SIZE 11
@@ -60,23 +61,28 @@ void setup() {
     // (38400 chosen because it works as well at 8MHz as it does at 16MHz, but
     // it's really up to you depending on your project)
     Serial.begin(38400);
+    delay(100);
 
     // initialize device
     Serial.println("Initializing I2C devices...");
     barometer.initialize();
     accelgyro.initialize();
+    delay(100);
 
     // verify connection
     Serial.println("Testing device connections...");
+    delay(100);
     Serial.println(barometer.testConnection() ? "BMP085 connection successful" : "BMP085 connection failed");
+    delay(100);
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+    delay(100);
 
     // configure LED pin for activity indication
     pinMode(LED_PIN, OUTPUT);
 
 
     // SD Card code
-    Serial.begin(9600);
+    //Serial.begin(9600);
     Serial.print("Initialising SD card...");
 
     //Remember to set the pin correctly. The shield we use is on pin 4! Don't listen to anyone that say otherwise!
@@ -159,7 +165,6 @@ void loop() {
     sprintf(checksum_str, "*%04X\n", CHECKSUM);
     strcat(datastring,checksum_str);
     rtty_txstring (datastring);
-
     updateScience();
   //  delay(1000);
 }
@@ -167,30 +172,33 @@ void loop() {
 
 // Reads science data andwrites it to sd card.
 void updateScience() {
-
+  
   /*char science[INPUT_SIZE + 1];
   science = readScience();*/
 
-  String tmp;
+
   tmp = readScience();
+  /*
   char science[1024];
   strncpy(science, tmp.c_str(), sizeof(science));
   science[sizeof(science) - 1] = 0;
 
-  science[INPUT_SIZE] = 0;
+  science[INPUT_SIZE] = 0;*/
 
   scienceFile = SD.open("HabSki.csv", FILE_WRITE);
 
   if (scienceFile){
     Serial.print("Writing Data...");
 
+  writeScience (tmp);
   // This bit splits our string into separate numbers, and sends each to be written on the sd card.
-  char* data =  strtok(science, ",");
+  /*char* data =  strtok(science, ",");
   while (data != 0) {
     writeScience (data);
 
     data = strtok(0, ",");
-  }
+  }*/
+  
 
   scienceFile.close();
   
@@ -203,18 +211,18 @@ void updateScience() {
 // Somehow gets a string of data
 String readScience() {
   //char* tempStr, pressureStr, altitudeStr;
-  char* tempStr = floatToString(tempStr, temperature, 5);
+  /*char* tempStr = floatToString(tempStr, temperature, 5);
   char* pressureStr = floatToString(pressureStr, pressure, 5);
-  char* altitudeStr = floatToString(altitudeStr, altitude, 5);
+  char* altitudeStr = floatToString(altitudeStr, altitude, 5);*/
 
-  
+  timestamp = millis();
   return String(timestamp);
 }
 
 
 
 // Writes provided data into a file in the format we want.
-void writeScience(char* scienceData) {
+void writeScience(String scienceData) {
   scienceFile.println (scienceData);
 }
 
