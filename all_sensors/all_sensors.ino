@@ -21,7 +21,7 @@
  
 File scienceFile;
 String tmp;
-#include "floatToString.h"
+//#include "floatToString.h"
 
 #define INPUT_SIZE 11
  
@@ -99,10 +99,15 @@ void setup() {
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 
+float tmp36_temp;
+
+float real_ax, real_ay, real_az;
+float real_a;
+
 void loop() {
       int tmp36_val = analog_averaging(A0);
     float tmp36_volt = ((float)tmp36_val / 1023.0) * vcc;
-    float tmp36_temp = ((tmp36_volt - 0.75) / 0.01) + 25.0;
+    tmp36_temp = ((tmp36_volt - 0.75) / 0.01) + 25.0;
   
     // request temperature
     barometer.setControl(BMP085_MODE_TEMPERATURE);
@@ -139,9 +144,9 @@ void loop() {
     Serial.print("TMP36 temp:  ");
     Serial.println(tmp36_temp);
         
-    float real_ax = ax / (16384.0 / 9.81);
-    float real_ay = ay / (16384.0 / 9.81);
-    float real_az = az / (16384.0 / 9.81);
+    real_ax = ax / (16384.0 / 9.81);
+    real_ay = ay / (16384.0 / 9.81);
+    real_az = az / (16384.0 / 9.81);
     Serial.print("Accel x,y,z: ");
     Serial.print(real_ax);
     Serial.print(", ");
@@ -149,7 +154,7 @@ void loop() {
     Serial.print(", ");
     Serial.println(real_az);
     
-    float real_a = sqrt(real_ax*real_ax+real_ay*real_ay+real_az*real_az);
+    real_a = sqrt(real_ax*real_ax+real_ay*real_ay+real_az*real_az);
     Serial.print("Net accel:  ");
     Serial.println(real_a);
     Serial.print("Gyro x,y,z: ");
@@ -209,14 +214,28 @@ void updateScience() {
 }
 
 // Somehow gets a string of data
+// More specifically, takes all the data we have, and sticks it into a string in the same order
+// as things are sent over the serial connection.
+//
+// This uses a lot of public variables... :)
 String readScience() {
   //char* tempStr, pressureStr, altitudeStr;
   /*char* tempStr = floatToString(tempStr, temperature, 5);
   char* pressureStr = floatToString(pressureStr, pressure, 5);
   char* altitudeStr = floatToString(altitudeStr, altitude, 5);*/
 
+  // Update timestamp to current time value.
   timestamp = millis();
-  return String(timestamp);
+  // First, all the atmospheric values from the BMP085 chip.
+  return String(timestamp) + "," + String(temperature) + "," + String(pressure) + "," + String(altitude)
+  // Now the temperature from TMP36 chip.
+    + "," + String(tmp36_temp)
+  // Now the accelearation along all 3 axes (BMP085).
+    + "," + String(real_ax) + "," + String(real_ay) + "," + String(real_az)
+  // The total acceleratiion (sum of the vectors) (BMP085).
+    + "," + String(real_a)
+  // Finally, the rotation along all 3 axes (BMP085).
+    + "," + String(gx) + "," + String(gy) + "," + String(gz);
 }
 
 
