@@ -1,0 +1,106 @@
+Detailed change history is available from subversion https://www.assembla.com/code/chdk/subversion/commits
+
+=1.4=
+Current stable, released Nov 29 2015 as 1.4.1.
+
+Compatibility with 1.3:
+* Scripts are generally compatible.
+  You will see a warning if @chdk_version is not specified in the script header, but 1.3 compatible behavior will be used. If you use @chdk_version 1.4, the return values of some functions are changed.
+  See https://subversion.assembla.com/svn/chdk/trunk/CHDK/LUALIB/wrap13.lua for a list of functions with changed return values
+* Some CHDK script mode numbers have changed, and some names have been removed. This does not affect common modes like, M, P and Auto, but might affect scripts that use more obscure modes, especially if the are referred to by number rather than capmode.lua names
+* CFG files: CHDK 1.4 uses the same CFG files as 1.3.
+  It should generally be compatible and retain your settings, but if you don't want to risk re-doing your CFG, backing up the CHDK/*.CFG files before updating is recommended.  Custom colors will be reset, and if you switch back to 1.3, colors may be incorrect. CHDK 1.2 CFGs should be migrated as was done for 1.3.
+* Modules and language files are NOT compatible. You must update these when you update your build.
+
+Significant changes:
+* long file name support in script, file browser / selector.
+  Discussion http://chdk.setepontos.com/index.php?topic=10833.0
+* enhanced script @parameter header including compact format, Boolean values, table support, and full variable names in Lua.
+  Documentation: http://chdk.wikia.com/wiki/CHDK_Script_Header#Lua_Shorthand_Parameter_Syntax
+  Discussion: http://chdk.setepontos.com/index.php?topic=12121.0 
+* upper and lower case single characters can now be used as @param variables in uBASIC
+* script header now supports @subtitle for better organization in script that use many parameters
+* Lua scripts now "compile" when loaded to reduce memory needed (original script text no longer stored in memory)
+  Discussion: http://chdk.setepontos.com/index.php?topic=12117.msg118923#msg118923
+* Added @chdk_version parameter to specify version of CHDK script was written for, 1.3 assumed if none present.
+  Discussion: http://chdk.setepontos.com/index.php?topic=12138.0
+* Made Lua script API use of boolean values more consistent, (@chdk_version 1.3 provides backward compatible behavior)
+  Development thread http://chdk.setepontos.com/index.php?topic=12138.0
+* enhanced UI functions for touchscreen equipped cameras - touching menu areas and window buttons directly now works
+  Discussion: http://chdk.setepontos.com/index.php?topic=12090.msg118468#msg118468
+* rework of CHDK color palette handling to allow separate palette definitions for each camera model - transparent grey color defined for OSD background use
+  Discussion http://chdk.setepontos.com/index.php?topic=12046.msg118169#msg118169
+* updates to GPS functionality for cameras with built-in GPS
+* improvements in console handling when script running including console not timing out and console reset to "on" state when script errors are encountered.
+* upgrades to Lua RAW shooting hooks to allow analysis and modification of RAW buffer during shooting
+  Documentation: http://chdk.wikia.com/wiki/Lua/Raw_Hook_Operations
+  Discussion: http://chdk.setepontos.com/index.php?topic=11081.10
+* scripts added to the User Menu can now be started directly from the User Menu via a full press on the shutter button.  Using Func/Set now brings up a dialog box for ok/cancel.  Selecting ok makes the script the current script and exits to the Script menu.
+* usb_force_active now available on almost all cameras
+* filewrite / remote capture support for many more cameras
+* development support for digic 6 / thumb2 cameras
+* Improved focus overrides
+  Discussion http://chdk.setepontos.com/index.php?topic=12103.10
+* Convert shot histogram code to a module.
+
+=1.3=
+Obsolete, released Dec 18 2014. Implemented new features are listed below :
+* Address some of the longstanding issues with focus overrides - especially in scripts. Discussion: http://chdk.setepontos.com/index.php?topic=11078.0
+* Hooks to allow Lua to run at specific points in the shooting process. Discussion: http://chdk.setepontos.com/index.php?topic=11081.0
+* Increase available memory, allow CHDK to allocate from multiple pools. Discussion: http://chdk.setepontos.com/index.php?topic=10886.0
+* Eye-fi support
+* Splitting the CHDK configuration files into 4 parts for better management
+* Improved Lua cfg access from lua
+* Allow scripts to configure script interrupt key
+* Improved script control of OSD via set_draw_title_line()
+* Various clean-ups to which OSD icons get displayed and when
+* Improved script functions for working with APEX96  exposure values
+* Allow scripts to set shooting exposure parameters inside half shoot
+* Added font scaling to Lua draw_string() function
+* Added OSD font scaling and OSD editor upgrade to support it
+* Added option to launch the current script on entry to <ALT> mode
+* Added script function that locks out Canon automatic exposure adjustments
+* Added support for > 64 second exposures all cameras (thanks koshy and nafraf)
+* Added support for USB remote capture on many more cameras (thanks koshy and nafraf)
+* Added os.idir, iterates over directory listings without loading the whole list in memory.
+* Fix long standing FsIoNotify crash issues http://chdk.setepontos.com/index.php?topic=6179.msg111410#msg111410
+* added user choice for where RAW/DNG files are saved (with jpg, seperate DCIM folder, seperate RAW tree), also fixed naming of seperate DCIM folder
+* added choice of DNG crop  (full, active, JPG)
+* added ability to enable a high speed timer to improve USB remote timing precision and accuracy
+* added battery third terminal remote trigger capability (enabled for selected cameras only)
+* added hotshoe control capability (for cameras with hotshoes of course) 
+
+=1.2=
+Obsolete, released July 30 2013. The following major features were implemented for 1.2.
+* intermittent Lua crashing bug fixed (finally. Also backported to 1.1)
+* Improved UI - discussion thread http://chdk.setepontos.com/index.php?topic=8151.0
+** menu items renamed and sometimes moved for clarity
+** input of numeric values simplified
+** the "Disable Overrides" menu item is now understandable
+** Tv override input value can be in Ev step,  seconds or HHMMSS format
+* Remote capture over USB
+* Improved DNG performance, now very close to framebuffer raw
+* Support raw operations on DNG
+* Improved memory usage by moving more code to modules
+* Fast integer based trigonometric functions for Lua
+* new editor for User Menu
+* scripts can be added to the User Menu
+* menu option to enable Lua native calls
+* menu option to disable keyboard shortcuts
+* improve console mode with menu options to extend the visibility time of console or review (scroll back) console output
+* loadable palette values allow a better range of colors in the UI  (not implemented on all cameras)
+* auto operation of internal / external flash enabled when other exposure values are in "M" mode
+* enhanced UI for script parameters :  @value allows use of named input values rather than just numeric
+* scripts can be set to always use the default parameter values in the code rather than stored parameters
+* ISO input for override, bracketing and auto-ISO now use approximately the same units as Canon UI ("market" ISO)
+* addition of an annoying "help" window that continuously pops up in <ALT> mode until you figure out how to disable it from the CHDK menu
+
+=1.1=
+Obsolete, released July 25 2012. Major features added in this release include
+* Loadable binary modules
+* Re-write of USB remote code
+* "Live view" over the CHDK PTP Extension
+* Integration of chdkde features (actually got added to previous stable too)
+
+=1.0=
+Previous stable, no further changes. Released Feb 2012.
