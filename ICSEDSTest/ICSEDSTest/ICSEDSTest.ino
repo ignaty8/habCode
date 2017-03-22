@@ -5,12 +5,13 @@
 */
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
+#include <util/crc16.h>
 #define LEDPIN 13
 #define RADIOPIN 9
 #define GPSTXPIN 4
 #define GPSRXPIN 3
 #define GPSENABLE 2
-char outputDate[80];
+char datastring[80];
 
 SoftwareSerial GPSSerial(GPSTXPIN, GPSRXPIN);
 TinyGPSPlus gps;
@@ -25,6 +26,7 @@ void setup() {
 	pinMode(OUTPUT, GPSENABLE);
 	digitalWrite(GPSENABLE, HIGH);
 	GPSSerial.begin(9600);
+	Serial.begin(9600);
 	//GPS Initalization Initalize software serial and tie to serial
 	telemetry = { 0,0,0 };
 }
@@ -33,9 +35,9 @@ void loop() {
 	while (GPSSerial.available()) {
 		int data = GPSSerial.read();
 		if (gps.encode(data)) {
-			telemetry.alt = gps.altitude.meters;
-			telemetry.lat = gps.location.rawLat;
-			telemetry.longd = gps.location.rawLng;
+			telemetry.alt = gps.altitude.meters();
+			telemetry.lat = gps.location.lat();
+			telemetry.longd = gps.location.lng();
 		}
 	}
 	sprintf(datastring, "Alt=%f ,Lat=%f , Long = %f", telemetry.alt,telemetry.lat,telemetry.longd);
@@ -43,9 +45,33 @@ void loop() {
 	char checksum_str[6];
 	sprintf(checksum_str, "*%04X\n", CHECKSUM);
 	strcat(datastring, checksum_str);
+  Serial.println(telemetry.alt);
+  Serial.println(telemetry.lat);
+  Serial.println(telemetry.longd);
+	Serial.println(datastring);
 	rtty_txstring(datastring);
 	delay(2000);
 }
+
+void rtty_txstring(char * string)
+{
+
+	/* Simple function to sent a char at a time to
+	** rtty_txbyte function.
+	** NB Each char is one byte (8 Bits)
+	*/
+
+	char c;
+
+	c = *string++;
+
+	while (c != '\0')
+	{
+		rtty_txbyte(c);
+		c = *string++;
+	}
+}
+
 void rtty_txbyte(char c)
 {
 	/* Simple function to sent each bit of a char to
