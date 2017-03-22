@@ -5,7 +5,6 @@
 */
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
-#include <string>
 #define LEDPIN 13
 #define RADIOPIN 9
 #define GPSTXPIN 4
@@ -27,7 +26,7 @@ void setup() {
 	digitalWrite(GPSENABLE, HIGH);
 	GPSSerial.begin(9600);
 	//GPS Initalization Initalize software serial and tie to serial
-	data = { 0,0,0 };
+	telemetry = { 0,0,0 };
 }
 // the loop function runs over and over again until power down or reset
 void loop() {
@@ -39,16 +38,13 @@ void loop() {
 			telemetry.longd = gps.location.rawLng;
 		}
 	}
-	sprintf(datastring, gpsDataToString(telemetry));
+	sprintf(datastring, "Alt=%f ,Lat=%f , Long = %f", telemetry.alt,telemetry.lat,telemetry.longd);
 	unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
 	char checksum_str[6];
 	sprintf(checksum_str, "*%04X\n", CHECKSUM);
 	strcat(datastring, checksum_str);
 	rtty_txstring(datastring);
 	delay(2000);
-}
-std::string gpsDataToString(PosData data) {
-	return "ALT=" + data.alt + ",LAT=" + data.lat + ",LONG=" + data.longd;
 }
 void rtty_txbyte(char c)
 {
