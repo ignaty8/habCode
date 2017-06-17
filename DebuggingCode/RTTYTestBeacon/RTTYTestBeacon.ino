@@ -7,7 +7,7 @@
     http://ukhas.org.uk
 */ 
  
-#define RADIOPIN 13
+#define RADIOPIN 9
  
 #include <string.h>
 #include <util/crc16.h>

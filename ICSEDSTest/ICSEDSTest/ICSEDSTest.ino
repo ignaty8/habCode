@@ -6,12 +6,36 @@
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
 #include <util/crc16.h>
+
+#include <SD.h>
+#include <SPI.h>
+
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_LSM303_U.h>
+#include <Adafruit_L3GD20_U.h>
+#include <Adafruit_9DOF.h>
+
 #define LEDPIN 13
 #define RADIOPIN 9
 #define GPSTXPIN 4
 #define GPSRXPIN 3
 #define GPSENABLE 2
 char datastring[80];
+String csvString;
+
+int CS_PIN = 10;
+
+File file;
+
+/* Assign a unique ID to the sensors */
+Adafruit_9DOF                dof   = Adafruit_9DOF();
+Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(30301);
+Adafruit_LSM303_Mag_Unified   mag   = Adafruit_LSM303_Mag_Unified(30302);
+
+
+/* Update this with the correct SLP for accurate altitude measurements */
+float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
 
 SoftwareSerial GPSSerial(GPSTXPIN, GPSRXPIN);
 TinyGPSPlus gps;
@@ -26,31 +50,168 @@ void setup() {
 	pinMode(OUTPUT, GPSENABLE);
 	digitalWrite(GPSENABLE, HIGH);
 	GPSSerial.begin(9600);
-	Serial.begin(9600);
+	Serial.begin(38400);
 	//GPS Initalization Initalize software serial and tie to serial
 	telemetry = { 0,0,0 };
+
+  initializeSD();
+  createFile("telem.txt");
+  closeFile();
+  
+  initSensors();
 }
 // the loop function runs over and over again until power down or reset
 void loop() {
 	while (GPSSerial.available()) {
 		int data = GPSSerial.read();
+    Serial.println("data: " + data);
 		if (gps.encode(data)) {
 			telemetry.alt = gps.altitude.meters();
 			telemetry.lat = gps.location.lat();
 			telemetry.longd = gps.location.lng();
 		}
 	}
-	sprintf(datastring, "Alt=%f ,Lat=%f , Long = %f", telemetry.alt,telemetry.lat,telemetry.longd);
+	//sprintf(datastring, "Alt=%f ,Lat=%f , Long = %f", telemetry.alt,telemetry.lat,telemetry.longd);
+  snprintf(datastring, 80, "%f,%f,%f", telemetry.alt,telemetry.lat,telemetry.longd);
+  //sprintf(datastring, 80, "P=%ld, T=%ld");//, (long)pressure, (long)temperature);
 	unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
 	char checksum_str[6];
 	sprintf(checksum_str, "*%04X\n", CHECKSUM);
+  csvString = String(millis());
+  csvString = csvString + ',' + datastring;
 	strcat(datastring, checksum_str);
   Serial.println(telemetry.alt);
   Serial.println(telemetry.lat);
   Serial.println(telemetry.longd);
 	Serial.println(datastring);
 	rtty_txstring(datastring);
+
+  //Serial.println(csvString);
+
+  sensors_event_t accel_event;
+  sensors_event_t mag_event;
+  sensors_vec_t   orientation;
+
+  /* Calculate pitch and roll from the raw accelerometer data */
+  accel.getEvent(&accel_event);
+  if (dof.accelGetOrientation(&accel_event, &orientation))
+  {
+    /* 'orientation' should have valid .roll and .pitch fields */
+    csvString = csvString + ',' + orientation.roll;
+    csvString = csvString + ',' + orientation.pitch;
+  }
+  
+  /* Calculate the heading using the magnetometer */
+  mag.getEvent(&mag_event);
+  if (dof.magGetOrientation(SENSOR_AXIS_Z, &mag_event, &orientation))
+  {
+  }
+
+  if (dof.magTiltCompensation(SENSOR_AXIS_Z, &mag_event, &accel_event))
+  {
+    csvString = csvString + ',' + String(orientation.heading);
+  }
+  else
+  {
+    // Oops ... something went wrong (probably bad data)
+  }
+
+  openFile("telem.txt");
+  char* fileString;
+  //csvString.toCharArray(fileString,);
+  writeToFile(csvString);
+  closeFile();
+  Serial.println(fileString);
+  Serial.println(csvString);
 	delay(2000);
+}
+
+void storeTelemetry(){
+  
+}
+
+void initSensors()
+{
+  if(!accel.begin())
+  {
+    /* There was a problem detecting the LSM303 ... check your connections */
+    Serial.println(F("Ooops, no LSM303 detected ... Check your wiring!"));
+    //while(1);
+  }
+  if(!mag.begin())
+  {
+    /* There was a problem detecting the LSM303 ... check your connections */
+    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+    //while(1);
+  }
+}
+
+void initializeSD()
+{
+  Serial.println("Initializing SD card...");
+  pinMode(CS_PIN, OUTPUT);
+
+  if (SD.begin())
+  {
+    Serial.println("SD card is ready to use.");
+  } else
+  {
+    Serial.println("SD card initialization failed");
+    return;
+  }
+}
+
+int createFile(char filename[])
+{
+  file = SD.open(filename, FILE_WRITE);
+
+  if (file)
+  {
+    Serial.println("File created successfully.");
+    return 1;
+  } else
+  {
+    Serial.println("Error while creating file.");
+    return 0;
+  }
+}
+
+int writeToFile(String text)
+{
+  if (file)
+  {
+    file.println(text);
+    Serial.println("Writing to file: ");
+    Serial.println(text);
+    return 1;
+  } else
+  {
+    Serial.println("Couldn't write to file");
+    return 0;
+  }
+}
+
+void closeFile()
+{
+  if (file)
+  {
+    file.close();
+    Serial.println("File closed");
+  }
+}
+
+int openFile(char filename[])
+{
+  file = SD.open(filename);
+  if (file)
+  {
+    Serial.println("File opened with success!");
+    return 1;
+  } else
+  {
+    Serial.println("Error opening file...");
+    return 0;
+  }
 }
 
 void rtty_txstring(char * string)
