@@ -18,8 +18,8 @@
 
 #define LEDPIN 13
 #define RADIOPIN 9
-#define GPSTXPIN 4
-#define GPSRXPIN 3
+//#define GPSTXPIN 4
+//#define GPSRXPIN 3
 #define GPSENABLE 2
 char datastring[80];
 String csvString;
@@ -37,54 +37,84 @@ Adafruit_LSM303_Mag_Unified   mag   = Adafruit_LSM303_Mag_Unified(30302);
 /* Update this with the correct SLP for accurate altitude measurements */
 float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
 
-SoftwareSerial GPSSerial(GPSTXPIN, GPSRXPIN);
+//SoftwareSerial GPSSERIAL(GPSTXPIN, GPSRXPIN);
+#define GPSSERIAL Serial1
 TinyGPSPlus gps;
 // the setup function runs once when you press reset or power the board
-struct PosData {
+/*struct PosData {
 	float lat, longd, alt;
 };
-PosData telemetry;
+struct PosData telemetry;
+*/
+double posLat, posLongd, posAlt;
 void setup() {
-	pinMode(OUTPUT, RADIOPIN);
-	pinMode(OUTPUT, LEDPIN);
-	pinMode(OUTPUT, GPSENABLE);
-	digitalWrite(GPSENABLE, HIGH);
-	GPSSerial.begin(9600);
-	Serial.begin(38400);
-	//GPS Initalization Initalize software serial and tie to serial
-	telemetry = { 0,0,0 };
+  pinMode(RADIOPIN, OUTPUT);
+  pinMode(LEDPIN, OUTPUT);
+  pinMode(GPSENABLE, OUTPUT);
+  digitalWrite(GPSENABLE, HIGH);
+
+  Serial.begin(38400);
+  while (!Serial) {
+
+  }
+  //Serial1.begin(9600);
+  //GPS Initalization Initalize software serial and tie to serial
+  //telemetry = { 0f,0f,0f };
 
   initializeSD();
   createFile("telem.txt");
   closeFile();
-  
+
   initSensors();
 }
 // the loop function runs over and over again until power down or reset
 void loop() {
-	while (GPSSerial.available()) {
-		int data = GPSSerial.read();
-    Serial.println("data: " + data);
-		if (gps.encode(data)) {
-			telemetry.alt = gps.altitude.meters();
-			telemetry.lat = gps.location.lat();
-			telemetry.longd = gps.location.lng();
-		}
-	}
-	//sprintf(datastring, "Alt=%f ,Lat=%f , Long = %f", telemetry.alt,telemetry.lat,telemetry.longd);
-  snprintf(datastring, 80, "%f,%f,%f", telemetry.alt,telemetry.lat,telemetry.longd);
+  //delay(5000);
+  
+  Serial1.begin(9600);
+  for(int k = 0; k < 200; k++){
+    delay(10);
+    while (Serial1.available())
+    {
+      Serial.write(Serial1.read());
+      //delay(100);
+      //send the serial data to buffer
+      //clean up data (?)
+      //serial end?
+      //gps.encode(buffer)
+      //gps.encode(Serial1.read());
+    }
+  }
+  Serial1.end();
+  
+  //Serial.println(gps.location.lat(), 6);
+  //int data = Serial1.read();
+  //Serial.println("data: " + data);
+  //if () {
+    posAlt = gps.altitude.meters();
+    //Serial.println(gps.location.lat(), 6);
+    posLat = gps.location.lat();
+    posLongd = gps.location.lng();
+  //}
+  
+  //sprintf(datastring, "Alt=%f ,Lat=%f , Long = %f", telemetry.alt,telemetry.lat,telemetry.longd);
+  snprintf(datastring, 80, "%d,%d,%d", posAlt,posLat,posLongd);
+  Serial.println(datastring); //return;
   //sprintf(datastring, 80, "P=%ld, T=%ld");//, (long)pressure, (long)temperature);
-	unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
-	char checksum_str[6];
-	sprintf(checksum_str, "*%04X\n", CHECKSUM);
+  unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
+  char checksum_str[6];
+  sprintf(checksum_str, "*%04X\n", CHECKSUM);
   csvString = String(millis());
   csvString = csvString + ',' + datastring;
-	strcat(datastring, checksum_str);
-  Serial.println(telemetry.alt);
-  Serial.println(telemetry.lat);
-  Serial.println(telemetry.longd);
-	Serial.println(datastring);
-	rtty_txstring(datastring);
+  strcat(datastring, checksum_str);
+  Serial.println(gps.altitude.meters());
+  Serial.println(gps.location.lat());
+  Serial.println(gps.location.lng());
+  Serial.println(posAlt);
+  Serial.println(posLat);
+  Serial.println(posLongd);
+  Serial.println(datastring);
+  rtty_txstring(datastring);
 
   //Serial.println(csvString);
 
@@ -92,6 +122,8 @@ void loop() {
   sensors_event_t mag_event;
   sensors_vec_t   orientation;
 
+  //TODO: add timer so this stupid library doesn't interrupt execution if the sensorgets disconnected
+  //Srsly who the HELL CODED THIS LIBRARY?!
   /* Calculate pitch and roll from the raw accelerometer data */
   accel.getEvent(&accel_event);
   if (dof.accelGetOrientation(&accel_event, &orientation))
@@ -100,7 +132,7 @@ void loop() {
     csvString = csvString + ',' + orientation.roll;
     csvString = csvString + ',' + orientation.pitch;
   }
-  
+
   /* Calculate the heading using the magnetometer */
   mag.getEvent(&mag_event);
   if (dof.magGetOrientation(SENSOR_AXIS_Z, &mag_event, &orientation))
@@ -123,22 +155,22 @@ void loop() {
   closeFile();
   Serial.println(fileString);
   Serial.println(csvString);
-	delay(2000);
+  delay(2000);
 }
 
-void storeTelemetry(){
-  
+void storeTelemetry() {
+
 }
 
 void initSensors()
 {
-  if(!accel.begin())
+  if (!accel.begin())
   {
     /* There was a problem detecting the LSM303 ... check your connections */
     Serial.println(F("Ooops, no LSM303 detected ... Check your wiring!"));
     //while(1);
   }
-  if(!mag.begin())
+  if (!mag.begin())
   {
     /* There was a problem detecting the LSM303 ... check your connections */
     Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
@@ -217,89 +249,89 @@ int openFile(char filename[])
 void rtty_txstring(char * string)
 {
 
-	/* Simple function to sent a char at a time to
-	** rtty_txbyte function.
-	** NB Each char is one byte (8 Bits)
-	*/
+  /* Simple function to sent a char at a time to
+  ** rtty_txbyte function.
+  ** NB Each char is one byte (8 Bits)
+  */
 
-	char c;
+  char c;
 
-	c = *string++;
+  c = *string++;
 
-	while (c != '\0')
-	{
-		rtty_txbyte(c);
-		c = *string++;
-	}
+  while (c != '\0')
+  {
+    rtty_txbyte(c);
+    c = *string++;
+  }
 }
 
 void rtty_txbyte(char c)
 {
-	/* Simple function to sent each bit of a char to
-	** rtty_txbit function.
-	** NB The bits are sent Least Significant Bit first
-	**
-	** All chars should be preceded with a 0 and
-	** proceded with a 1. 0 = Start bit; 1 = Stop bit
-	**
-	*/
+  /* Simple function to sent each bit of a char to
+  ** rtty_txbit function.
+  ** NB The bits are sent Least Significant Bit first
+  **
+  ** All chars should be preceded with a 0 and
+  ** proceded with a 1. 0 = Start bit; 1 = Stop bit
+  **
+  */
 
-	int i;
+  int i;
 
-	rtty_txbit(0); // Start bit
+  rtty_txbit(0); // Start bit
 
-				   // Send bits for for char LSB first 
+  // Send bits for for char LSB first
 
-	for (i = 0; i<7; i++) // Change this here 7 or 8 for ASCII-7 / ASCII-8
-	{
-		if (c & 1) rtty_txbit(1);
+  for (i = 0; i < 7; i++) // Change this here 7 or 8 for ASCII-7 / ASCII-8
+  {
+    if (c & 1) rtty_txbit(1);
 
-		else rtty_txbit(0);
+    else rtty_txbit(0);
 
-		c = c >> 1;
+    c = c >> 1;
 
-	}
-	rtty_txbit(1); // Stop bit
-	rtty_txbit(1); // Stop bit
+  }
+  rtty_txbit(1); // Stop bit
+  rtty_txbit(1); // Stop bit
 }
 
 void rtty_txbit(int bit)
 {
-	if (bit)
-	{
-		// high
-		digitalWrite(RADIOPIN, HIGH);
-	}
-	else
-	{
-		// low
-		digitalWrite(RADIOPIN, LOW);
+  if (bit)
+  {
+    // high
+    digitalWrite(RADIOPIN, HIGH);
+  }
+  else
+  {
+    // low
+    digitalWrite(RADIOPIN, LOW);
 
-	}
+  }
 
-	//                  delayMicroseconds(3370); // 300 baud
-	delayMicroseconds(10000); // For 50 Baud uncomment this and the line below. 
-	delayMicroseconds(10150); // You can't do 20150 it just doesn't work as the
-							  // largest value that will produce an accurate delay is 16383
-							  // See : http://arduino.cc/en/Reference/DelayMicroseconds
+  //                  delayMicroseconds(3370); // 300 baud
+  delayMicroseconds(10000); // For 50 Baud uncomment this and the line below.
+  delayMicroseconds(10150); // You can't do 20150 it just doesn't work as the
+  // largest value that will produce an accurate delay is 16383
+  // See : http://arduino.cc/en/Reference/DelayMicroseconds
 
 }
 
 uint16_t gps_CRC16_checksum(char *string)
 {
-	size_t i;
-	uint16_t crc;
-	uint8_t c;
+  size_t i;
+  uint16_t crc;
+  uint8_t c;
 
-	crc = 0xFFFF;
+  crc = 0xFFFF;
 
-	// Calculate checksum ignoring the first two $s
-	for (i = 2; i < strlen(string); i++)
-	{
-		c = string[i];
-		crc = _crc_xmodem_update(crc, c);
-	}
+  // Calculate checksum ignoring the first two $s
+  for (i = 2; i < strlen(string); i++)
+  {
+    c = string[i];
+    crc = _crc_xmodem_update(crc, c);
+  }
 
-	return crc;
+  return crc;
 }
 
