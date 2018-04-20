@@ -21,10 +21,14 @@
 //#define GPSTXPIN 4
 //#define GPSRXPIN 3
 #define GPSENABLE 2
-char datastring[80];
+char datastring[140];
+char floatBuffer[10];
 String csvString;
+String timeActual;
 
 int CS_PIN = 10;
+
+String callsign = "NEMO";
 
 File file;
 
@@ -76,13 +80,13 @@ void loop() {
     delay(10);
     while (Serial1.available())
     {
-      Serial.write(Serial1.read());
+      //Serial.write(Serial1.read());
       //delay(100);
       //send the serial data to buffer
       //clean up data (?)
       //serial end?
       //gps.encode(buffer)
-      //gps.encode(Serial1.read());
+      gps.encode(Serial1.read());
     }
   }
   Serial1.end();
@@ -95,36 +99,42 @@ void loop() {
     //Serial.println(gps.location.lat(), 6);
     posLat = gps.location.lat();
     posLongd = gps.location.lng();
+
+    timeActual = String(gps.time.hour()) + ':' + String(gps.time.minute()) + ':' + String(gps.time.second());
   //}
   
   //sprintf(datastring, "Alt=%f ,Lat=%f , Long = %f", telemetry.alt,telemetry.lat,telemetry.longd);
-  snprintf(datastring, 80, "%d,%d,%d", posAlt,posLat,posLongd);
-  Serial.println(datastring); //return;
+  //snprintf(datastring, 80, "%.6f,%.6f,%.6f", posLat,posLongd,posAlt);
+  //Serial.println(datastring); //return;
   //sprintf(datastring, 80, "P=%ld, T=%ld");//, (long)pressure, (long)temperature);
+
+  csvString = "$$" + callsign + ',' + String(millis());
+  csvString = csvString + ',' + timeActual;
+  csvString += ',' + String(posLat, 6);
+  csvString += ',' + String(posLongd,6);
+  csvString += ',' + String(posAlt,6);
+  csvString.toCharArray(datastring,140);
   unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
   char checksum_str[6];
   sprintf(checksum_str, "*%04X\n", CHECKSUM);
-  csvString = String(millis());
-  csvString = csvString + ',' + datastring;
   strcat(datastring, checksum_str);
-  Serial.println(gps.altitude.meters());
-  Serial.println(gps.location.lat());
-  Serial.println(gps.location.lng());
-  Serial.println(posAlt);
-  Serial.println(posLat);
-  Serial.println(posLongd);
+  //Serial.println(gps.altitude.meters());
+  //Serial.println(gps.location.lat());
+  //Serial.println(gps.location.lng());
+  Serial.println("Transmitting Data:");
   Serial.println(datastring);
   rtty_txstring(datastring);
 
   //Serial.println(csvString);
-
+  
   sensors_event_t accel_event;
   sensors_event_t mag_event;
   sensors_vec_t   orientation;
-
+  
   //TODO: add timer so this stupid library doesn't interrupt execution if the sensorgets disconnected
   //Srsly who the HELL CODED THIS LIBRARY?!
   /* Calculate pitch and roll from the raw accelerometer data */
+  if(accel.begin()){
   accel.getEvent(&accel_event);
   if (dof.accelGetOrientation(&accel_event, &orientation))
   {
@@ -132,8 +142,10 @@ void loop() {
     csvString = csvString + ',' + orientation.roll;
     csvString = csvString + ',' + orientation.pitch;
   }
+  }
 
   /* Calculate the heading using the magnetometer */
+  if(mag.begin()){
   mag.getEvent(&mag_event);
   if (dof.magGetOrientation(SENSOR_AXIS_Z, &mag_event, &orientation))
   {
@@ -147,14 +159,21 @@ void loop() {
   {
     // Oops ... something went wrong (probably bad data)
   }
-
+  }
   openFile("telem.txt");
   char* fileString;
   //csvString.toCharArray(fileString,);
   writeToFile(csvString);
   closeFile();
-  Serial.println(fileString);
-  Serial.println(csvString);
+  //Serial.println(fileString);
+  //Serial.println(csvString);
+  Serial.println();
+
+  if(posAlt < 500 && gps.time.hour() >= 19){
+    digitalWrite(LEDPIN, HIGH);
+  } else {
+    digitalWrite(LEDPIN, LOW);
+  }
   delay(2000);
 }
 
