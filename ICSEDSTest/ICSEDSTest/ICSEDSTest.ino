@@ -69,7 +69,7 @@ void setup() {
   createFile("telem.txt");
   closeFile();
 
-  initSensors();
+  //initSensors();
 }
 // the loop function runs over and over again until power down or reset
 void loop() {

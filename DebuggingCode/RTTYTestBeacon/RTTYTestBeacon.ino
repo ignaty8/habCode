@@ -16,12 +16,15 @@ char datastring[80];
  
 void setup() {                
   pinMode(RADIOPIN,OUTPUT);
+  Serial.begin(38400);
 }
+
+int count = 0;
  
 void loop() {
  
- 
-  sprintf(datastring,"RTTY TEST BEACON RTTY TEST BEACON"); // Puts the text in the datastring
+  Serial.println("!!!!!");
+  sprintf(datastring,"%d", count); // Puts the text in the datastring
   unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
   char checksum_str[6];
   sprintf(checksum_str, "*%04X\n", CHECKSUM);
@@ -29,6 +32,7 @@ void loop() {
  
   rtty_txstring (datastring);
   delay(2000);
+  count++;
 }
  
  
